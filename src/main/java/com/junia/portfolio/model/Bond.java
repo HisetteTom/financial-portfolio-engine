@@ -1,6 +1,6 @@
 package com.junia.portfolio.model;
 
-public class Bond extends Asset {
+public class Bond extends Asset implements Taxable, Tradeable {
     private double couponRate;
     private int maturityYear;
 
@@ -13,6 +13,22 @@ public class Bond extends Asset {
     @Override
     public double calculateCurrentValue(double currentPrice) {
         return getQuantity() * currentPrice;
+    }
+
+    @Override
+    public double calculateTaxableGain(double sellingPrice, double unitsSold) {
+        double gain = (sellingPrice - getPurchasePrice()) * unitsSold;
+        return Math.max(0.0, gain);
+    }
+
+    @Override
+    public double getTaxRate() {
+        return 0.15;
+    }
+
+    @Override
+    public boolean isOrderSizeValid(double quantity) {
+        return quantity >= 1.0 && quantity == Math.floor(quantity);
     }
 
     public double getCouponRate() {

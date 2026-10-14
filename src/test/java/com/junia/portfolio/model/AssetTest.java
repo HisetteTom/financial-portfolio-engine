@@ -4,6 +4,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AssetTest {
     private Stock stock;
@@ -13,9 +15,9 @@ class AssetTest {
 
     @BeforeEach
     void setUp() {
-        stock = new Stock("YOLO", 10.0, 150.0, 0.005);
+        stock = new Stock("AAPL", 10.0, 150.0, 0.005);
         crypto = new CryptoAsset("BTC", 0.5, 60000.0, 15.0);
-        bond = new Bond("FR-10%", 5.0, 1000.0, 0.04, 2034);
+        bond = new Bond("US10Y", 5.0, 1000.0, 0.04, 2034);
         portfolio = new Portfolio(10000.0);
     }
 
@@ -45,5 +47,24 @@ class AssetTest {
 
         assertEquals(3, portfolio.getAssets().size());
         assertEquals(10000.0, portfolio.getCashBalance(), 0.001);
+    }
+
+    @Test
+    void shouldCalculateTaxableGains() {
+        assertEquals(300.0, stock.calculateTaxableGain(180.0, 10.0), 0.001);
+        assertEquals(0.0, stock.calculateTaxableGain(120.0, 10.0), 0.001);
+        assertEquals(0.30, stock.getTaxRate(), 0.001);
+        assertEquals(0.15, bond.getTaxRate(), 0.001);
+    }
+
+    @Test
+    void shouldValidateOrderSizes() {
+        assertTrue(stock.isOrderSizeValid(5.0));
+        assertFalse(stock.isOrderSizeValid(5.5));
+        assertFalse(stock.isOrderSizeValid(-1.0));
+
+        assertTrue(crypto.isOrderSizeValid(0.0005));
+        assertTrue(bond.isOrderSizeValid(2.0));
+        assertFalse(bond.isOrderSizeValid(0.5));
     }
 }
