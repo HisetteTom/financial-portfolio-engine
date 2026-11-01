@@ -10,6 +10,7 @@ import com.junia.portfolio.model.Portfolio;
 import com.junia.portfolio.service.AnalyticsService;
 import com.junia.portfolio.service.MarketDataService;
 import com.junia.portfolio.service.PortfolioService;
+import com.junia.portfolio.ui.web.PortfolioWebController;
 import com.junia.portfolio.utils.AssetCsvParser;
 import com.junia.portfolio.utils.FinancialFormatter;
 
@@ -39,6 +40,15 @@ public class Application {
         initialPrices.put("FRTR", 990.0);
 
         MarketDataService marketDataService = new MarketDataService(initialPrices);
+
+        if (args.length > 0 && args[0].equalsIgnoreCase("--web")) {
+            int port = 7070;
+            PortfolioWebController webController = new PortfolioWebController(portfolioService, marketDataService, analyticsService);
+            webController.start(port);
+            System.out.println("Web dashboard running at http://localhost:" + port);
+            return;
+        }
+
         Scanner scanner = new Scanner(System.in);
         boolean running = true;
 
