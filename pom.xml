@@ -12,7 +12,7 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <javalin.version>6.4.0</javalin.version>
+        <javalin.version>7.2.3</javalin.version>
         <jackson.version>2.18.2</jackson.version>
     </properties>
 
