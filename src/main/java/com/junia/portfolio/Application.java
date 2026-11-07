@@ -13,7 +13,10 @@ import com.junia.portfolio.service.PortfolioService;
 import com.junia.portfolio.ui.web.PortfolioWebController;
 import com.junia.portfolio.utils.AssetCsvParser;
 import com.junia.portfolio.utils.FinancialFormatter;
+import com.junia.portfolio.utils.PortfolioStorage;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
@@ -28,8 +31,17 @@ public class Application {
         PortfolioService portfolioService = new PortfolioService(portfolio, parser);
         AnalyticsService analyticsService = new AnalyticsService();
 
-        Path csvPath = Paths.get("src/main/resources/assets.csv");
-        portfolioService.loadAssetsFromCsv(csvPath);
+        Path statePath = Paths.get("data/portfolio_state.csv");
+        if (Files.exists(statePath)) {
+            try {
+                PortfolioStorage.load(portfolio, statePath, parser);
+            } catch (IOException e) {
+                System.out.println("Could not load saved state, falling back to initial csv.");
+                portfolioService.loadAssetsFromCsv(Paths.get("src/main/resources/assets.csv"));
+            }
+        } else {
+            portfolioService.loadAssetsFromCsv(Paths.get("src/main/resources/assets.csv"));
+        }
 
         Map<String, Double> initialPrices = new HashMap<>();
         initialPrices.put("AAPL", 185.0);
@@ -43,7 +55,7 @@ public class Application {
 
         if (args.length > 0 && args[0].equalsIgnoreCase("--web")) {
             int port = 7070;
-            PortfolioWebController webController = new PortfolioWebController(portfolioService, marketDataService, analyticsService);
+            PortfolioWebController webController = new PortfolioWebController(portfolioService, marketDataService, analyticsService, statePath);
             webController.start(port);
             System.out.println("Web dashboard running at http://localhost:" + port);
             return;
@@ -58,7 +70,8 @@ public class Application {
             System.out.println("2. Buy asset");
             System.out.println("3. Sell asset");
             System.out.println("4. Simulate market day");
-            System.out.println("5. Exit");
+            System.out.println("5. Reset portfolio to initial state");
+            System.out.println("6. Exit");
             System.out.print("> ");
 
             String choice = scanner.nextLine().trim();
@@ -68,7 +81,11 @@ public class Application {
                 case "2" -> handleBuy(portfolioService, scanner);
                 case "3" -> handleSell(portfolioService, marketDataService, analyticsService, scanner);
                 case "4" -> simulateMarket(marketDataService);
-                case "5" -> running = false;
+                case "5" -> resetPortfolio(portfolioService, statePath);
+                case "6" -> {
+                    savePortfolioState(portfolio, statePath);
+                    running = false;
+                }
                 default -> System.out.println("Invalid option.");
             }
         }
@@ -155,8 +172,29 @@ public class Application {
         }
     }
 
+    private static void resetPortfolio(PortfolioService service, Path statePath) {
+        service.getPortfolio().getAssets().clear();
+        service.getPortfolio().setCashBalance(5000.0);
+        service.loadAssetsFromCsv(Paths.get("src/main/resources/assets.csv"));
+        try {
+            Files.deleteIfExists(statePath);
+            System.out.println("Portfolio reset to initial state.");
+        } catch (IOException e) {
+            System.out.println("Error deleting saved state: " + e.getMessage());
+        }
+    }
+
     private static void simulateMarket(MarketDataService marketDataService) {
         marketDataService.simulateMarketDay();
         System.out.println("Simulated 1 market day. Prices updated.");
+    }
+
+    private static void savePortfolioState(Portfolio portfolio, Path path) {
+        try {
+            PortfolioStorage.save(portfolio, path);
+            System.out.println("Portfolio state saved to " + path);
+        } catch (IOException e) {
+            System.out.println("Failed to save state: " + e.getMessage());
+        }
     }
 }

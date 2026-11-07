@@ -8,7 +8,7 @@ import com.junia.portfolio.model.Stock;
 public class AssetCsvParser extends AbstractCsvParser<Asset> {
 
     @Override
-    protected Asset parseLine(String line) {
+    public Asset parseLine(String line) {
         String[] columns = line.split(",", -1);
 
         String type = columns[0].trim();

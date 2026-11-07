@@ -10,9 +10,12 @@ import com.junia.portfolio.model.Portfolio;
 import com.junia.portfolio.service.AnalyticsService;
 import com.junia.portfolio.service.MarketDataService;
 import com.junia.portfolio.service.PortfolioService;
+import com.junia.portfolio.utils.PortfolioStorage;
 import io.javalin.Javalin;
 import io.javalin.http.staticfiles.Location;
 
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -24,13 +27,16 @@ public class PortfolioWebController {
     private final MarketDataService marketDataService;
     private final AnalyticsService analyticsService;
     private final List<Double> portfolioHistory;
+    private final Path savePath;
 
     public PortfolioWebController(PortfolioService portfolioService,
                                   MarketDataService marketDataService,
-                                  AnalyticsService analyticsService) {
+                                  AnalyticsService analyticsService,
+                                  Path savePath) {
         this.portfolioService = portfolioService;
         this.marketDataService = marketDataService;
         this.analyticsService = analyticsService;
+        this.savePath = savePath;
         this.portfolioHistory = new ArrayList<>();
 
         double initialTotal = portfolioService.calculateTotalValue(marketDataService.getAllPrices());
@@ -91,6 +97,25 @@ public class PortfolioWebController {
                 ctx.json(response);
             });
 
+            config.routes.post("/api/portfolio/reset", ctx -> {
+                portfolioService.getPortfolio().getAssets().clear();
+                portfolioService.getPortfolio().setCashBalance(5000.0);
+                portfolioService.loadAssetsFromCsv(java.nio.file.Paths.get("src/main/resources/assets.csv"));
+
+                if (savePath != null) {
+                    try {
+                        java.nio.file.Files.deleteIfExists(savePath);
+                    } catch (IOException ignored) {
+                    }
+                }
+
+                portfolioHistory.clear();
+                double resetTotal = portfolioService.calculateTotalValue(marketDataService.getAllPrices());
+                portfolioHistory.add(resetTotal);
+
+                ctx.status(200).result("Portfolio reset to initial state");
+            });
+
             config.routes.post("/api/market/simulate", ctx -> {
                 marketDataService.simulateMarketDay();
                 double newTotal = portfolioService.calculateTotalValue(marketDataService.getAllPrices());
@@ -110,6 +135,13 @@ public class PortfolioWebController {
                         portfolioHistory.set(portfolioHistory.size() - 1, newTotal);
                     } else {
                         portfolioHistory.add(newTotal);
+                    }
+
+                    if (savePath != null) {
+                        try {
+                            PortfolioStorage.save(portfolioService.getPortfolio(), savePath);
+                        } catch (IOException ignored) {
+                        }
                     }
 
                     ctx.status(201).result("Order executed successfully");

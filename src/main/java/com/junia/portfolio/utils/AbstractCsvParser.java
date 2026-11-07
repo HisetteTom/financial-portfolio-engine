@@ -19,5 +19,5 @@ public abstract class AbstractCsvParser<T> {
         }
     }
 
-    protected abstract T parseLine(String line);
+    public abstract T parseLine(String line);
 }

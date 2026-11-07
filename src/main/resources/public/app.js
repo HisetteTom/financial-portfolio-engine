@@ -180,6 +180,13 @@ document.getElementById('simulateBtn').addEventListener('click', async () => {
     fetchPortfolio();
 });
 
+document.getElementById('resetBtn').addEventListener('click', async () => {
+    if (confirm('Reinitialiser le portefeuille a son etat initial ?')) {
+        await fetch('/api/portfolio/reset', { method: 'POST' });
+        fetchPortfolio();
+    }
+});
+
 document.getElementById('orderForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const symbol = document.getElementById('symbolSelect').value;
