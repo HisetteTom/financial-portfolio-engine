@@ -1,8 +1,10 @@
 package com.junia.portfolio.utils;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 public class FinancialFormatter {
+    private static final char[] SPARKLINE_LEVELS = {' ', '▂', '▃', '▄', '▅', '▆', '▇', '█'};
 
     public static String formatBarChart(double percentage, int totalWidth) {
         double clamped = Math.max(0.0, Math.min(100.0, percentage));
@@ -12,32 +14,27 @@ public class FinancialFormatter {
         return "[" + "█".repeat(filledCount) + " ".repeat(emptyCount) + "]";
     }
 
+    public static String formatQuantity(double quantity) {
+        return BigDecimal.valueOf(quantity).stripTrailingZeros().toPlainString();
+    }
+
     public static String formatSparkline(List<Double> values) {
         if (values == null || values.isEmpty()) {
             return "";
         }
-        if (values.size() == 1) {
-            return "▄";
-        }
 
-        double min = Double.MAX_VALUE;
-        double max = Double.MIN_VALUE;
-        for (double v : values) {
-            if (v < min) min = v;
-            if (v > max) max = v;
-        }
+        double min = values.stream().mapToDouble(Double::doubleValue).min().orElse(0.0);
+        double max = values.stream().mapToDouble(Double::doubleValue).max().orElse(0.0);
 
-        char[] levels = new char[]{' ', '▂', '▃', '▄', '▅', '▆', '▇', '█'};
-        StringBuilder sb = new StringBuilder();
-
-        for (double v : values) {
+        StringBuilder sparkline = new StringBuilder();
+        for (double value : values) {
             if (max == min) {
-                sb.append('▄');
+                sparkline.append('▄');
             } else {
-                int index = (int) Math.round(((v - min) / (max - min)) * (levels.length - 1));
-                sb.append(levels[index]);
+                int index = (int) Math.round(((value - min) / (max - min)) * (SPARKLINE_LEVELS.length - 1));
+                sparkline.append(SPARKLINE_LEVELS[index]);
             }
         }
-        return sb.toString();
+        return sparkline.toString();
     }
 }

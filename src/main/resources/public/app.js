@@ -9,13 +9,14 @@ async function fetchPortfolio() {
         cachedMarketPrices = data.allMarketPrices || {};
         renderView(data);
     } catch (err) {
-        console.error("Erreur de chargement:", err);
+        console.error("Loading error:", err);
     }
 }
 
 function renderView(data) {
     document.getElementById('totalValue').textContent = formatCurrency(data.totalPortfolioValue);
     document.getElementById('cashBalance').textContent = formatCurrency(data.cashBalance);
+    document.getElementById('annualIncome').textContent = formatCurrency(data.projectedAnnualIncome);
 
     const pnlEl = document.getElementById('totalPnl');
     const pnlVal = data.totalUnrealizedPnl || 0.0;
@@ -40,11 +41,13 @@ function renderView(data) {
 
         row.innerHTML = `
             <td><strong>${asset.symbol}</strong></td>
+            <td>${asset.assetType}</td>
             <td>${asset.quantity.toFixed(4)}</td>
             <td>${formatCurrency(asset.purchasePrice)}</td>
             <td>${formatCurrency(asset.marketPrice)}</td>
             <td>${formatCurrency(asset.currentValue)}</td>
             <td class="${pnlClass}">${pnlPrefix}${formatCurrency(asset.gainLoss)}</td>
+            <td class="${pnlClass}">${pnlPrefix}${asset.returnOnInvestment.toFixed(2)} %</td>
             <td>${asset.allocation.toFixed(1)} %</td>
         `;
         tbody.appendChild(row);
@@ -80,7 +83,7 @@ function syncPriceWithSelectedSymbol() {
     const symbol = document.getElementById('symbolSelect').value;
     const priceInput = document.getElementById('price');
     if (symbol && cachedMarketPrices[symbol]) {
-        priceInput.value = cachedMarketPrices[symbol].toFixed(2);
+        priceInput.value = formatCurrency(cachedMarketPrices[symbol]);
     }
 }
 
@@ -99,7 +102,8 @@ function renderAllocationChart(labels, values) {
             datasets: [{
                 data: values,
                 backgroundColor: [
-                    '#f5a97f', '#8aadf4', '#a6da95', '#eed49f', '#c6a0f6', '#f0c6c6'
+                    '#f5a97f', '#8aadf4', '#a6da95', '#eed49f', '#c6a0f6', '#f0c6c6',
+                    '#8bd5ca', '#ed8796', '#91d7e3', '#b7bdf8'
                 ],
                 borderWidth: 0
             }]
@@ -123,7 +127,7 @@ function renderHistoryChart(history) {
         historyChartInstance.destroy();
     }
 
-    const labels = history.map((_, i) => (i === 0 ? 'Depart' : `Jour ${i}`));
+    const labels = history.map((_, i) => (i === 0 ? 'Start' : `Day ${i}`));
     const isProfitable = history.length > 1 && history[history.length - 1] >= history[0];
     const lineColor = isProfitable ? '#a6da95' : '#ed8796';
 
@@ -132,7 +136,7 @@ function renderHistoryChart(history) {
         data: {
             labels: labels,
             datasets: [{
-                label: 'Valeur totale du portefeuille (€)',
+                label: 'Total portfolio value (€)',
                 data: history,
                 borderColor: lineColor,
                 backgroundColor: isProfitable ? 'rgba(166, 218, 149, 0.15)' : 'rgba(237, 135, 150, 0.15)',
@@ -155,7 +159,7 @@ function renderHistoryChart(history) {
                     grid: { color: '#363a4f' },
                     ticks: {
                         color: '#8087a2',
-                        callback: val => val.toLocaleString('fr-FR') + ' €'
+                        callback: val => val.toLocaleString('en-US') + ' €'
                     }
                 }
             },
@@ -169,7 +173,7 @@ function renderHistoryChart(history) {
 }
 
 function formatCurrency(val) {
-    return (val || 0.0).toLocaleString('fr-FR', {
+    return (val || 0.0).toLocaleString('en-US', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
     }) + ' €';
@@ -181,7 +185,7 @@ document.getElementById('simulateBtn').addEventListener('click', async () => {
 });
 
 document.getElementById('resetBtn').addEventListener('click', async () => {
-    if (confirm('Reinitialiser le portefeuille a son etat initial ?')) {
+    if (confirm('Reset the portfolio to its initial state?')) {
         await fetch('/api/portfolio/reset', { method: 'POST' });
         fetchPortfolio();
     }
@@ -192,7 +196,6 @@ document.getElementById('orderForm').addEventListener('submit', async (e) => {
     const symbol = document.getElementById('symbolSelect').value;
     const type = document.getElementById('type').value;
     const quantity = parseFloat(document.getElementById('quantity').value);
-    const price = parseFloat(document.getElementById('price').value);
 
     const statusEl = document.getElementById('orderStatus');
 
@@ -200,7 +203,7 @@ document.getElementById('orderForm').addEventListener('submit', async (e) => {
         const response = await fetch('/api/orders', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ symbol, type, quantity, price })
+            body: JSON.stringify({ symbol, type, quantity })
         });
 
         const text = await response.text();
@@ -214,7 +217,7 @@ document.getElementById('orderForm').addEventListener('submit', async (e) => {
             statusEl.className = 'negative';
         }
     } catch (err) {
-        statusEl.textContent = 'Erreur reseau.';
+        statusEl.textContent = 'Network error.';
         statusEl.className = 'negative';
     }
 });

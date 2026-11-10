@@ -1,27 +1,50 @@
 package com.junia.portfolio.model;
 
-public class Stock extends Asset implements Taxable, Tradeable {
-    private double annualDividendRate;
+import java.util.List;
+
+public class Stock extends Asset {
+    private static final double BROKERAGE_FEE = 1.0;
+    private static final double VOLUME_FEE_RATE = 0.001;
+    private static final double FLAT_TAX_RATE = 0.30;
+
+    private final double annualDividendRate;
 
     public Stock(String symbol, double quantity, double purchasePrice, double annualDividendRate) {
         super(symbol, quantity, purchasePrice);
+        if (annualDividendRate < 0) {
+            throw new IllegalArgumentException("Dividend rate cannot be negative for " + symbol + ".");
+        }
         this.annualDividendRate = annualDividendRate;
     }
 
     @Override
-    public double calculateCurrentValue(double currentPrice) {
-        return getQuantity() * currentPrice;
+    public AssetType getAssetType() {
+        return AssetType.STOCK;
     }
 
     @Override
-    public double calculateTaxableGain(double sellingPrice, double unitsSold) {
-        double gain = (sellingPrice - getPurchasePrice()) * unitsSold;
-        return Math.max(0.0, gain);
+    public double calculateTransactionFee(double orderQuantity, double price) {
+        return BROKERAGE_FEE + orderQuantity * price * VOLUME_FEE_RATE;
+    }
+
+    @Override
+    public double calculateAnnualIncome(double currentPrice) {
+        return getQuantity() * currentPrice * annualDividendRate;
+    }
+
+    @Override
+    public Asset createPosition(double quantity, double purchasePrice) {
+        return new Stock(getSymbol(), quantity, purchasePrice, annualDividendRate);
+    }
+
+    @Override
+    public List<Double> getSpecificParameters() {
+        return List.of(annualDividendRate);
     }
 
     @Override
     public double getTaxRate() {
-        return 0.30;
+        return FLAT_TAX_RATE;
     }
 
     @Override
@@ -31,9 +54,5 @@ public class Stock extends Asset implements Taxable, Tradeable {
 
     public double getAnnualDividendRate() {
         return annualDividendRate;
-    }
-
-    public void setAnnualDividendRate(double annualDividendRate) {
-        this.annualDividendRate = annualDividendRate;
     }
 }

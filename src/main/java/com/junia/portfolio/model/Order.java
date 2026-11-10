@@ -1,13 +1,13 @@
 package com.junia.portfolio.model;
 
 public class Order {
-    private String symbol;
-    private OrderType type;
-    private double quantity;
-    private double price;
+    private final String symbol;
+    private final OrderType type;
+    private final double quantity;
+    private final double price;
 
     public Order(String symbol, OrderType type, double quantity, double price) {
-        this.symbol = symbol;
+        this.symbol = symbol == null ? "" : symbol.trim().toUpperCase();
         this.type = type;
         this.quantity = quantity;
         this.price = price;

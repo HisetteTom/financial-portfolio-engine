@@ -1,50 +1,54 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Financial Portfolio Engine</title>
     <link rel="stylesheet" href="styles.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.6.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
     <div class="app-layout">
         <header>
             <div>
                 <h1>Portfolio Engine</h1>
-                <div class="subtitle">Gestion et valorisation d'actifs multi-classes</div>
+                <div class="subtitle">Multi-asset portfolio management and valuation</div>
             </div>
             <div class="actions">
-                <button id="simulateBtn">Simuler 1 jour</button>
-                <button id="resetBtn" class="btn-secondary">Reinitialiser</button>
+                <button id="simulateBtn">Simulate 1 day</button>
+                <button id="resetBtn" class="btn-secondary">Reset</button>
             </div>
         </header>
 
         <section class="kpi-grid">
             <div class="kpi-card">
-                <div class="kpi-label">Valorisation totale</div>
+                <div class="kpi-label">Total value</div>
                 <div class="kpi-value" id="totalValue">0.00 €</div>
             </div>
             <div class="kpi-card">
-                <div class="kpi-label">Gains / Pertes</div>
+                <div class="kpi-label">Gains / Losses</div>
                 <div class="kpi-value" id="totalPnl">0.00 €</div>
             </div>
             <div class="kpi-card">
-                <div class="kpi-label">Liquidites disponibles</div>
+                <div class="kpi-label">Available cash</div>
                 <div class="kpi-value" id="cashBalance">0.00 €</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Projected annual income</div>
+                <div class="kpi-value" id="annualIncome">0.00 €</div>
             </div>
         </section>
 
         <main>
             <section class="charts-grid">
                 <div class="card">
-                    <h2>Evolution temporelle du portefeuille</h2>
+                    <h2>Portfolio value over time</h2>
                     <div class="chart-box">
                         <canvas id="historyChart"></canvas>
                     </div>
                 </div>
                 <div class="card">
-                    <h2>Repartition des actifs</h2>
+                    <h2>Asset allocation</h2>
                     <div class="chart-box doughnut-box">
                         <canvas id="allocationChart"></canvas>
                     </div>
@@ -53,18 +57,20 @@
 
             <section class="bottom-grid">
                 <div class="card table-card">
-                    <h2>Positions detenues</h2>
+                    <h2>Positions</h2>
                     <div class="table-wrap">
                         <table>
                             <thead>
                                 <tr>
-                                    <th>Symbole</th>
-                                    <th>Quantite</th>
-                                    <th>PRU</th>
-                                    <th>Cours</th>
-                                    <th>Valeur</th>
+                                    <th>Symbol</th>
+                                    <th>Type</th>
+                                    <th>Quantity</th>
+                                    <th>Avg. cost</th>
+                                    <th>Price</th>
+                                    <th>Value</th>
                                     <th>P&L</th>
-                                    <th>Poids</th>
+                                    <th>ROI</th>
+                                    <th>Weight</th>
                                 </tr>
                             </thead>
                             <tbody id="assetsTableBody"></tbody>
@@ -73,29 +79,29 @@
                 </div>
 
                 <div class="card order-card">
-                    <h2>Passer un ordre</h2>
+                    <h2>Place an order</h2>
                     <form id="orderForm">
                         <div class="form-group">
-                            <label for="symbolSelect">Actif</label>
+                            <label for="symbolSelect">Asset</label>
                             <select id="symbolSelect" required></select>
                         </div>
                         <div class="form-group">
-                            <label for="type">Sens</label>
+                            <label for="type">Side</label>
                             <select id="type">
-                                <option value="BUY">Achat</option>
-                                <option value="SELL">Vente</option>
+                                <option value="BUY">Buy</option>
+                                <option value="SELL">Sell</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="quantity">Quantite</label>
+                            <label for="quantity">Quantity</label>
                             <input type="number" step="any" id="quantity" min="0.00000001" placeholder="Ex: 5" required>
                         </div>
                         <div class="form-group">
-                            <label for="price">Prix unitaire</label>
-                            <input type="number" step="any" id="price" min="0.01" placeholder="Cours" required>
+                            <label for="price">Market price</label>
+                            <input type="text" id="price" placeholder="Price" readonly>
                         </div>
                         <div class="form-group btn-group">
-                            <button type="submit">Executer</button>
+                            <button type="submit">Execute</button>
                         </div>
                     </form>
                     <div id="orderStatus"></div>

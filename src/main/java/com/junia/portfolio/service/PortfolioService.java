@@ -7,89 +7,111 @@ import com.junia.portfolio.model.Asset;
 import com.junia.portfolio.model.Order;
 import com.junia.portfolio.model.OrderType;
 import com.junia.portfolio.model.Portfolio;
-import com.junia.portfolio.utils.AssetCsvParser;
+import com.junia.portfolio.model.TradeReceipt;
+import com.junia.portfolio.utils.FinancialFormatter;
 
-import java.nio.file.Path;
-import java.util.List;
-import java.util.Map;
+import java.util.Locale;
 import java.util.Optional;
 
 public class PortfolioService {
     private final Portfolio portfolio;
-    private final AssetCsvParser csvParser;
+    private final MarketDataService marketDataService;
 
-    public PortfolioService(Portfolio portfolio, AssetCsvParser csvParser) {
+    public PortfolioService(Portfolio portfolio, MarketDataService marketDataService) {
         this.portfolio = portfolio;
-        this.csvParser = csvParser;
-    }
-
-    public void loadAssetsFromCsv(Path csvPath) {
-        List<Asset> assets = csvParser.parse(csvPath);
-        for (Asset asset : assets) {
-            portfolio.addAsset(asset);
-        }
-    }
-
-    public double calculateTotalValue(Map<String, Double> marketPrices) {
-        double totalAssetsValue = portfolio.getAssets().stream()
-                .mapToDouble(asset -> {
-                    double currentPrice = marketPrices.getOrDefault(asset.getSymbol(), asset.getPurchasePrice());
-                    return asset.calculateCurrentValue(currentPrice);
-                })
-                .sum();
-        return totalAssetsValue + portfolio.getCashBalance();
+        this.marketDataService = marketDataService;
     }
 
     public Optional<Asset> findAssetBySymbol(String symbol) {
-        return portfolio.getAssets().stream()
-                .filter(asset -> asset.getSymbol().equalsIgnoreCase(symbol))
-                .findFirst();
+        return portfolio.findAsset(symbol);
     }
 
-    public void executeOrder(Order order) throws InsufficientFundsException, AssetNotFoundException, InvalidTransactionException {
-        if (order.getQuantity() <= 0 || order.getPrice() <= 0) {
-            throw new InvalidTransactionException("Order quantity and price must be strictly positive.");
+    public TradeReceipt placeMarketOrder(OrderType type, String symbol, double quantity)
+            throws InsufficientFundsException, AssetNotFoundException, InvalidTransactionException {
+        if (symbol == null || symbol.isBlank()) {
+            throw new InvalidTransactionException("Order symbol is missing.");
         }
+        // price comes from the market so the user can't buy at a made up price
+        double marketPrice = marketDataService.findPrice(symbol)
+                .orElseThrow(() -> new AssetNotFoundException("No market price available for " + symbol + "."));
+        return executeOrder(new Order(symbol, type, quantity, marketPrice));
+    }
+
+    public TradeReceipt executeOrder(Order order)
+            throws InsufficientFundsException, AssetNotFoundException, InvalidTransactionException {
+        validateOrder(order);
 
         if (order.getType() == OrderType.BUY) {
-            executeBuy(order);
-        } else if (order.getType() == OrderType.SELL) {
-            executeSell(order);
+            return executeBuy(order);
+        }
+        return executeSell(order);
+    }
+
+    private void validateOrder(Order order) throws InvalidTransactionException {
+        if (order.getType() == null) {
+            throw new InvalidTransactionException("Order type is missing.");
+        }
+        if (order.getSymbol().isBlank()) {
+            throw new InvalidTransactionException("Order symbol is missing.");
+        }
+        if (!(order.getQuantity() > 0) || !(order.getPrice() > 0)) {
+            throw new InvalidTransactionException("Order quantity and price must be strictly positive.");
         }
     }
 
-    private void executeBuy(Order order) throws InsufficientFundsException {
-        double totalCost = order.getTotalValue();
+    private TradeReceipt executeBuy(Order order) throws InsufficientFundsException, AssetNotFoundException, InvalidTransactionException {
+        Optional<Asset> ownedAsset = portfolio.findAsset(order.getSymbol());
+        Asset reference = ownedAsset
+                .or(() -> marketDataService.findListing(order.getSymbol()))
+                .orElseThrow(() -> new AssetNotFoundException("Unknown symbol on the market: " + order.getSymbol()));
+
+        checkOrderSize(reference, order);
+
+        double fee = reference.calculateTransactionFee(order.getQuantity(), order.getPrice());
+        double totalCost = order.getTotalValue() + fee;
         if (portfolio.getCashBalance() < totalCost) {
-            throw new InsufficientFundsException("Insufficient funds to buy " + order.getQuantity() + " of " + order.getSymbol());
+            throw new InsufficientFundsException(String.format(Locale.ROOT,
+                    "Insufficient funds: %.2f needed but only %.2f available.", totalCost, portfolio.getCashBalance()));
         }
 
-        portfolio.setCashBalance(portfolio.getCashBalance() - totalCost);
-
-        Optional<Asset> existing = findAssetBySymbol(order.getSymbol());
-        if (existing.isPresent()) {
-            Asset asset = existing.get();
-            double totalQuantity = asset.getQuantity() + order.getQuantity();
-            double weightedPrice = ((asset.getQuantity() * asset.getPurchasePrice()) + totalCost) / totalQuantity;
-            asset.setQuantity(totalQuantity);
-            asset.setPurchasePrice(weightedPrice);
+        portfolio.withdrawCash(totalCost);
+        if (ownedAsset.isPresent()) {
+            ownedAsset.get().addUnits(order.getQuantity(), order.getPrice());
+        } else {
+            portfolio.addAsset(reference.createPosition(order.getQuantity(), order.getPrice()));
         }
+        return new TradeReceipt(order, fee, 0.0, totalCost);
     }
 
-    private void executeSell(Order order) throws AssetNotFoundException, InvalidTransactionException {
-        Asset asset = findAssetBySymbol(order.getSymbol())
+    private TradeReceipt executeSell(Order order) throws AssetNotFoundException, InvalidTransactionException {
+        Asset asset = portfolio.findAsset(order.getSymbol())
                 .orElseThrow(() -> new AssetNotFoundException("Asset not found in portfolio: " + order.getSymbol()));
 
-        if (asset.getQuantity() < order.getQuantity()) {
+        checkOrderSize(asset, order);
+
+        if (!asset.holdsAtLeast(order.getQuantity())) {
             throw new InvalidTransactionException("Cannot sell more quantity than currently owned.");
         }
 
-        double proceeds = order.getTotalValue();
-        asset.setQuantity(asset.getQuantity() - order.getQuantity());
-        portfolio.setCashBalance(portfolio.getCashBalance() + proceeds);
+        double fee = asset.calculateTransactionFee(order.getQuantity(), order.getPrice());
+        double tax = asset.calculateSellingTax(order.getPrice(), order.getQuantity());
+        double netProceeds = order.getTotalValue() - fee - tax;
+        if (netProceeds <= 0) {
+            throw new InvalidTransactionException("Sale amount does not cover the transaction fees.");
+        }
 
-        if (asset.getQuantity() == 0) {
-            portfolio.getAssets().remove(asset);
+        asset.removeUnits(order.getQuantity());
+        portfolio.depositCash(netProceeds);
+        if (asset.isSoldOut()) {
+            portfolio.removeAsset(asset);
+        }
+        return new TradeReceipt(order, fee, tax, netProceeds);
+    }
+
+    private void checkOrderSize(Asset asset, Order order) throws InvalidTransactionException {
+        if (!asset.isOrderSizeValid(order.getQuantity())) {
+            throw new InvalidTransactionException("Invalid quantity " + FinancialFormatter.formatQuantity(order.getQuantity())
+                    + " for " + asset.getAssetType().name().toLowerCase() + " " + asset.getSymbol() + ".");
         }
     }
 

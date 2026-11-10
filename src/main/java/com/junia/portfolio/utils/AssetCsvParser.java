@@ -1,36 +1,59 @@
 package com.junia.portfolio.utils;
 
 import com.junia.portfolio.model.Asset;
-import com.junia.portfolio.model.Bond;
-import com.junia.portfolio.model.CryptoAsset;
-import com.junia.portfolio.model.Stock;
+import com.junia.portfolio.model.AssetType;
+
+import java.util.List;
+import java.util.stream.Stream;
 
 public class AssetCsvParser extends AbstractCsvParser<Asset> {
 
     @Override
-    public Asset parseLine(String line) {
+    protected Asset parseLine(String line) {
+        String[] columns = splitColumns(line, 6);
+        double quantity = parseNumber(columns[2], line);
+        double purchasePrice = parseNumber(columns[3], line);
+        return createAsset(columns[0], columns[1], quantity, purchasePrice, columns[4], columns[5], line);
+    }
+
+    public Asset parseAssetLine(String line) {
+        return parseLine(line);
+    }
+
+    protected String[] splitColumns(String line, int expectedColumns) {
         String[] columns = line.split(",", -1);
+        if (columns.length != expectedColumns) {
+            throw new IllegalArgumentException("expected " + expectedColumns + " columns in line \"" + line + "\"");
+        }
+        return columns;
+    }
 
-        String type = columns[0].trim();
-        String symbol = columns[1].trim();
-        double quantity = Double.parseDouble(columns[2].trim());
-        double purchasePrice = Double.parseDouble(columns[3].trim());
+    protected double parseNumber(String value, String line) {
+        try {
+            return Double.parseDouble(value.trim());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("invalid number \"" + value + "\" in line \"" + line + "\"");
+        }
+    }
 
-        return switch (type.toUpperCase()) {
-            case "STOCK" -> {
-                double dividendRate = Double.parseDouble(columns[4].trim());
-                yield new Stock(symbol, quantity, purchasePrice, dividendRate);
-            }
-            case "CRYPTO" -> {
-                double gasFee = Double.parseDouble(columns[4].trim());
-                yield new CryptoAsset(symbol, quantity, purchasePrice, gasFee);
-            }
-            case "BOND" -> {
-                double couponRate = Double.parseDouble(columns[4].trim());
-                int maturityYear = Integer.parseInt(columns[5].trim());
-                yield new Bond(symbol, quantity, purchasePrice, couponRate, maturityYear);
-            }
-            default -> throw new IllegalArgumentException("Unknown asset type: " + type);
-        };
+    protected Asset createAsset(String type, String symbol, double quantity, double price,
+                                String extraParam, String secondExtraParam, String line) {
+        List<Double> parameters = Stream.of(extraParam, secondExtraParam)
+                .filter(value -> !value.isBlank())
+                .map(value -> parseNumber(value, line))
+                .toList();
+        try {
+            return parseType(type, line).create(symbol, quantity, price, parameters);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException(e.getMessage() + " in line \"" + line + "\"");
+        }
+    }
+
+    private AssetType parseType(String type, String line) {
+        try {
+            return AssetType.valueOf(type.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("unknown asset type \"" + type + "\"");
+        }
     }
 }
