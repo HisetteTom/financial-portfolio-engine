@@ -45,4 +45,16 @@ class MarketCsvParserTest {
 
         assertThrows(InvalidDataFileException.class, () -> parser.parse(file));
     }
+
+    @Test
+    void shouldRefuseDuplicateSymbol(@TempDir Path tempDir) throws Exception {
+        Path file = tempDir.resolve("market.csv");
+        Files.write(file, List.of("TYPE,SYMBOL,PRICE,EXTRA_PARAM,EXTRA_PARAM2",
+                "STOCK,AAPL,185.00,0.005,",
+                "STOCK,aapl,190.00,0.005,"));
+
+        InvalidDataFileException exception = assertThrows(InvalidDataFileException.class, () -> parser.parse(file));
+
+        assertTrue(exception.getMessage().contains("AAPL"));
+    }
 }
