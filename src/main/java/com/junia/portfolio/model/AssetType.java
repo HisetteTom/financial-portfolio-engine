@@ -25,8 +25,4 @@ public enum AssetType {
         }
         return creator.create(symbol, quantity, price, parameters);
     }
-
-    public int getParameterCount() {
-        return parameterCount;
-    }
 }
