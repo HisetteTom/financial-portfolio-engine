@@ -49,7 +49,7 @@ Everything is in the com.junia.portfolio package.
 | Package | Class | Role |
 | --- | --- | --- |
 | model | Asset | Abstract parent of every asset: symbol, quantity, average purchase price, and the shared rules (value, capital gain, adding and removing units) |
-| model | AssetType, AssetCreator | Enum of the asset types. Each value creates its own asset through the AssetCreator interface |
+| model | AssetType | Enum of the asset types. It creates the right asset object from a line of the CSV file |
 | model | Stock, CryptoAsset, Bond | The three asset types, each with its own fees, tax rate, order size and income |
 | model | Taxable, Tradeable | Interfaces for capital gains tax and order size checks |
 | model | Portfolio | Owned positions and cash balance |
@@ -71,7 +71,7 @@ Everything is in the com.junia.portfolio package.
 
 2. The market has its own file. Buying an asset you don't own yet needs its type and its parameters (dividend, network fee or coupon), so market.csv lists the assets you can buy. A purchase calls createPosition on the listed asset, which returns a new position of the right type. The service never needs a switch or an instanceof.
 
-3. Asset types are an enum, AssetType. Each value knows how many extra parameters its asset needs and how to create it, with a lambda that implements AssetCreator. The parser calls AssetType.valueOf(type).create(...), so reading and saving have no switch on the type either. Assets only give out their data (getAssetType, getSpecificParameters), and CsvPortfolioRepository decides how the file looks.
+3. Asset types are an enum, AssetType. Each value knows how many extra parameters its asset needs, and its create method builds the right object. The parser calls AssetType.valueOf(type).create(...), so the switch on the type is written once, inside AssetType, and nowhere else. Assets only give out their data (getAssetType, getSpecificParameters), and CsvPortfolioRepository decides how the file looks.
 
 4. Business and data errors are checked exceptions. Errors we expect to happen, like missing funds, an unknown asset, a bad order or a broken file, extend Exception, so the caller has to deal with them. Programming mistakes, like creating an asset with a negative quantity, throw an IllegalArgumentException.
 
@@ -114,11 +114,10 @@ double fee = reference.calculateTransactionFee(order.getQuantity(), order.getPri
 
 Asset is abstract because a plain "asset" with no type makes no sense, so it should never be created. It holds state and shared code (average price, capital gain), which an interface can't do, and it makes every subclass write the methods that depend on its type.
 
-There are four interfaces:
+There are three interfaces:
 
 - Taxable is for anything taxed on a capital gain (calculateTaxableGain, getTaxRate).
 - Tradeable holds the order size rule (isOrderSizeValid).
-- AssetCreator has a single create method, written as a lambda in each AssetType value.
 - PortfolioRepository lists what the application needs to load and save a portfolio, without knowing it is stored in a CSV file.
 
 Taxable and Tradeable are kept small and apart, one ability each. Asset implements both, since here every asset can be traded and is taxed on its gains. The capital gain calculation is the same for everyone and lives in Asset, while each subclass sets its own tax rate and order size rule.
@@ -148,7 +147,7 @@ If a saved state exists in data/portfolio_state.csv (same format as assets.csv),
 ## 11. SOLID principles
 
 - Single Responsibility: ConsoleMenu only talks to the user, PortfolioService handles orders, AnalyticsService the indicators, MarketDataService the prices, CsvPortfolioRepository the saving and the parsers the file reading. The model classes don't know the file format, so changing it only touches the repository. Application only creates and connects the objects.
-- Open/Closed: to add a new asset type, say RealEstateAsset, you write a subclass of Asset and add a value to AssetType. The parser, the repository, PortfolioService and AnalyticsService stay the same, because none of them has an if or a switch on the type, and fees, income, tax and order size are methods of the asset.
+- Open/Closed: to add a new asset type, say RealEstateAsset, you write a subclass of Asset and add a value and a case to AssetType. The parser, the repository, PortfolioService and AnalyticsService stay the same, because none of them has an if or a switch on the type, and fees, income, tax and order size are methods of the asset.
 - Liskov Substitution: any subclass of Asset works wherever an Asset is expected. The tests call the same methods on a List<Asset> holding all three types.
 - Interface Segregation: Taxable and Tradeable are two short interfaces, each with methods that belong together.
 - Dependency Inversion: objects get what they need through their constructor. ConsoleMenu and PortfolioWebController use the PortfolioRepository interface, and only Application chooses CsvPortfolioRepository, so the storage could move to a database without changing the user interface. MarketDataService is given its Random, which lets the tests get the same simulation every run.
