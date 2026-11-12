@@ -1,14 +1,14 @@
 # Financial Portfolio Engine
 
-Java application that manages a portfolio of financial assets (stocks, cryptocurrencies, bonds).
+A Java application that manages a portfolio of stocks, cryptocurrencies and bonds.
 
 ## 1. Purpose
 
-The application tracks a portfolio made of several asset classes, values it using market prices, simulates price changes day after day and places buy and sell orders.
+The application keeps track of a portfolio with several kinds of assets. It values the portfolio at market prices, simulates price changes day by day and lets you buy and sell.
 
-Each asset type has its own business rules: transaction fees, capital gains tax rate, allowed order size and annual income (dividends, coupons). A purchase recalculates the average purchase price, and a sale deducts fees and capital gains tax before crediting the cash balance.
+Each asset type has its own rules for transaction fees, capital gains tax, allowed order size and yearly income (dividends or coupons). When you buy, the average purchase price is recalculated. When you sell, fees and capital gains tax are taken off before the money goes back to the cash balance.
 
-At startup, the portfolio and the market are loaded from two CSV files. No business object is hard-coded.
+The portfolio and the market are loaded from two CSV files at startup, so no asset is written in the code.
 
 ## 2. How to run
 
@@ -21,88 +21,82 @@ At startup, the portfolio and the market are loaded from two CSV files. No busin
 mvn test
 ```
 
-### Build and run the application
-Run these commands from the project root (the data files are read from `src/main/resources/`).
+### Run the application in IntelliJ IDEA
+1. Open the financial-portfolio-engine folder in IntelliJ. It is imported as a Maven project.
+2. Open the Application class (package com.junia.portfolio) and click the green arrow next to main.
+3. To choose the mode, go to Run > Edit Configurations... and select the Application configuration. Leave Program arguments empty for the console, or write --web for the web dashboard. The Working directory has to be the project root, because the data files are read from src/main/resources.
+4. Click Apply and run it again.
 
-```bash
-mvn clean package
-java -jar target/financial-portfolio-engine-0.1.jar
-```
-
-An optional web dashboard is also available:
-```bash
-java -jar target/financial-portfolio-engine-0.1.jar --web
-```
-then open `http://localhost:7070`. The console mode is the main mode.
+In console mode the menu shows up in the Run tab at the bottom of IntelliJ, and you type your choices there. In web mode, open http://localhost:7070 in a browser. **The console is the main mode**; the web dashboard is an extra.
 
 ## 3. Features
 
-- Loads the initial portfolio (`assets.csv`, including cash) and the market (`market.csv`) at startup
-- Shows positions: quantity, average purchase price, market price, value, unrealized gain/loss, ROI, portfolio weight and price trend
-- Shows the market with the fee for one unit of each asset
-- Buys an asset already owned (average purchase price is recalculated) or a new asset listed on the market
-- Sells with fees and capital gains tax deducted, and removes the position when everything is sold
-- Checks orders: enough cash, quantity valid for the asset type, quantity owned
-- Estimates the portfolio's annual income (dividends and coupons)
-- Simulates a market day (random change from -4 % to +4 % for each asset)
-- Saves the portfolio state automatically after each order and on exit, and restores it on the next start
-- Resets the portfolio to its initial state
+- Loads the starting portfolio (assets.csv, which also holds the cash) and the market (market.csv)
+- Shows each position with its quantity, average purchase price, market price, value, unrealized gain or loss, ROI, weight in the portfolio and price trend
+- Shows the market, with the fee for buying one unit of each asset
+- Buys more of an asset you already own (the average purchase price is updated) or a new asset from the market
+- Sells with fees and capital gains tax taken off, and removes the position once everything is sold
+- Checks every order: enough cash, a quantity allowed for that asset type, and enough units owned for a sale
+- Estimates the yearly income of the portfolio from dividends and coupons
+- Simulates a market day, where each price moves randomly between -4 % and +4 %
+- Saves the portfolio after every order and on exit, and loads it back on the next start
+- Resets the portfolio to its starting state
 
 ## 4. Main classes
 
-Package `com.junia.portfolio`:
+Everything is in the com.junia.portfolio package.
 
 | Package | Class | Role |
 | --- | --- | --- |
-| `model` | `Asset` | Abstract class for an asset: symbol, quantity, average purchase price, shared rules (value, capital gain, adding/removing units) |
-| `model` | `AssetType`, `AssetCreator` | Enum of asset types; each value knows how to create its asset through the `AssetCreator` interface |
-| `model` | `Stock`, `CryptoAsset`, `Bond` | Concrete asset types with their own fees, tax rate, order size and income |
-| `model` | `Taxable`, `Tradeable` | Interfaces: capital gains taxation and order size validation |
-| `model` | `Portfolio` | Owned positions and cash balance |
-| `model` | `Order`, `OrderType`, `TradeReceipt` | A buy/sell order and the details of its execution (fees, tax, net amount) |
-| `model` | `PositionSummary` | Calculated view of a position, used by the console and the web dashboard |
-| `service` | `PortfolioService` | Order execution and transaction rules |
-| `service` | `MarketDataService` | Listed assets, current prices, history and simulation |
-| `service` | `AnalyticsService` | Valuation, gains/losses, ROI, weights, annual income, tax estimate |
-| `utils` | `AbstractCsvParser<T>`, `AssetCsvParser`, `MarketCsvParser` | Reading CSV files and creating objects |
-| `repository` | `PortfolioRepository`, `CsvPortfolioRepository` | Portfolio persistence interface and its CSV implementation |
-| `utils` | `FinancialFormatter` | Allocation bars and sparklines in the console |
-| `ui.console` | `ConsoleMenu` | User interaction in the console |
-| `ui.web` | `PortfolioWebController` | REST API for the web dashboard (optional) |
-| | `Application` | Entry point: wires the objects together and starts the console or the web dashboard |
+| model | Asset | Abstract parent of every asset: symbol, quantity, average purchase price, and the shared rules (value, capital gain, adding and removing units) |
+| model | AssetType, AssetCreator | Enum of the asset types. Each value creates its own asset through the AssetCreator interface |
+| model | Stock, CryptoAsset, Bond | The three asset types, each with its own fees, tax rate, order size and income |
+| model | Taxable, Tradeable | Interfaces for capital gains tax and order size checks |
+| model | Portfolio | Owned positions and cash balance |
+| model | Order, OrderType, TradeReceipt | A buy or sell order, and what happened when it ran (fees, tax, net amount) |
+| model | PositionSummary | Computed view of a position, used by the console and the web dashboard |
+| service | PortfolioService | Runs orders and applies the transaction rules |
+| service | MarketDataService | Listed assets, current prices, price history and simulation |
+| service | AnalyticsService | Value, gains and losses, ROI, weights, yearly income, tax estimate |
+| utils | AbstractCsvParser<T>, AssetCsvParser, MarketCsvParser | Read the CSV files and build the objects |
+| repository | PortfolioRepository, CsvPortfolioRepository | Interface for saving and loading a portfolio, and its CSV version |
+| utils | FinancialFormatter | Allocation bars and sparklines for the console |
+| ui.console | ConsoleMenu | Talks to the user in the console |
+| ui.web | PortfolioWebController | REST API behind the optional web dashboard |
+| | Application | Entry point. Creates the objects, connects them and starts the console or the web dashboard |
 
 ## 5. Technical decisions
 
-1. **Orders are executed at the market price.** The user picks the symbol and the quantity, and the price comes from `MarketDataService`. If users could type their own price, they could buy at 1 € and sell at the real price.
+1. Orders use the market price. The user only picks the symbol and the quantity, and MarketDataService gives the price. If users could type a price, they could buy at 1 € and sell at the real price.
 
-2. **A market file separate from the portfolio.** To buy an asset you don't own yet, you need its type and its parameters (dividend, network fee, coupon). `market.csv` lists the available assets, and a purchase calls `createPosition` on the listed asset to create a new position of the right type, without any `switch` or `instanceof` in the service.
+2. The market has its own file. Buying an asset you don't own yet needs its type and its parameters (dividend, network fee or coupon), so market.csv lists the assets you can buy. A purchase calls createPosition on the listed asset, which returns a new position of the right type. The service never needs a switch or an instanceof.
 
-3. **Asset types are described by an enum (`AssetType`).** Each enum value says how many specific parameters the asset expects and how to create it (a lambda implementing `AssetCreator`). The parser calls `AssetType.valueOf(type).create(...)`, so there is no `switch` on the type when reading or saving. Assets only expose their data (`getAssetType`, `getSpecificParameters`); `CsvPortfolioRepository` decides the file format.
+3. Asset types are an enum, AssetType. Each value knows how many extra parameters its asset needs and how to create it, with a lambda that implements AssetCreator. The parser calls AssetType.valueOf(type).create(...), so reading and saving have no switch on the type either. Assets only give out their data (getAssetType, getSpecificParameters), and CsvPortfolioRepository decides how the file looks.
 
-4. **Checked exceptions for business and data errors.** Expected errors (insufficient funds, unknown asset, invalid order, malformed file) extend `Exception`, which forces the caller to handle them. Programming errors (an asset created with a negative quantity) throw an `IllegalArgumentException`.
+4. Business and data errors are checked exceptions. Errors we expect to happen, like missing funds, an unknown asset, a bad order or a broken file, extend Exception, so the caller has to deal with them. Programming mistakes, like creating an asset with a negative quantity, throw an IllegalArgumentException.
 
-5. **Numbers are written independently of the system language.** On a French system, `String.format("%.2f")` writes `2500,00`, which would break a comma-separated CSV. Saving uses `BigDecimal.toPlainString()`, which always writes a dot.
+5. Numbers are saved the same way whatever the system language is. On a French system, String.format("%.2f") writes 2500,00, and that comma would break a comma-separated file. Saving uses BigDecimal.toPlainString(), which always writes a dot.
 
 ## 6. Inheritance
 
-`Asset` is the parent class of `Stock`, `CryptoAsset` and `Bond`. It holds what all assets have in common: symbol, quantity, average purchase price, market value, taxable gain calculation, average price update on a purchase and unit removal on a sale.
+Asset is the parent class of Stock, CryptoAsset and Bond. It holds what all assets share: symbol, quantity, average purchase price, market value, the taxable gain calculation, the average price update when buying and the removal of units when selling.
 
-`MarketCsvParser` extends `AssetCsvParser`: it reads a different column layout (price instead of quantity and purchase price) but reuses the asset creation.
+MarketCsvParser extends AssetCsvParser. Its file has different columns (a price instead of a quantity and a purchase price), but it reuses the code that creates the assets.
 
 ## 7. Polymorphism
 
-The services only work with `Asset`; the behavior depends on the actual type of the object:
+The services only handle Asset objects, and what happens depends on the real type of each one:
 
-| Method | `Stock` | `CryptoAsset` | `Bond` |
+| Method | Stock | CryptoAsset | Bond |
 | --- | --- | --- | --- |
-| `calculateTransactionFee` | 1 € + 0.1 % of the amount | network fee + 0.5 % | flat 5 € |
-| `calculateAnnualIncome` | dividend | 0 | coupon on a 1000 € face value |
-| `getTaxRate` | 30 % | 30 % | 15 % |
-| `isOrderSizeValid` | whole number | down to 0.00000001 | whole number, at least 1 |
-| `createPosition` | creates a `Stock` | creates a `CryptoAsset` | creates a `Bond` |
-| `getSpecificParameters` | dividend rate | network fee | coupon rate, maturity year |
+| calculateTransactionFee | 1 € + 0.1 % of the amount | network fee + 0.5 % | flat 5 € |
+| calculateAnnualIncome | dividend | 0 | coupon on a 1000 € face value |
+| getTaxRate | 30 % | 30 % | 15 % |
+| isOrderSizeValid | whole number | down to 0.00000001 | whole number, at least 1 |
+| createPosition | creates a Stock | creates a CryptoAsset | creates a Bond |
+| getSpecificParameters | dividend rate | network fee | coupon rate, maturity year |
 
-Example in `AnalyticsService`, without any type check:
+For example, AnalyticsService adds up the yearly income without checking any type:
 
 ```java
 portfolio.getAssets().stream()
@@ -110,7 +104,7 @@ portfolio.getAssets().stream()
         .sum();
 ```
 
-And in `PortfolioService` during a purchase:
+And PortfolioService gets the fee for a purchase the same way:
 
 ```java
 double fee = reference.calculateTransactionFee(order.getQuantity(), order.getPrice());
@@ -118,54 +112,57 @@ double fee = reference.calculateTransactionFee(order.getQuantity(), order.getPri
 
 ## 8. Abstract class and interfaces
 
-- **`Asset` (abstract class)**: a "generic" asset does not exist, so it must not be instantiated. The class holds both state and shared code (average price, capital gain), which an interface cannot do, and forces subclasses to implement the methods specific to each type.
-- **`Taxable` (interface)**: describes the ability to be taxed on a capital gain (`calculateTaxableGain`, `getTaxRate`).
-- **`Tradeable` (interface)**: describes the order size rule (`isOrderSizeValid`).
-- **`AssetCreator` (interface)**: a single `create` method, implemented by a lambda in each `AssetType` value.
-- **`PortfolioRepository` (interface)**: what the application needs to load and save a portfolio, without knowing that it is a CSV file.
+Asset is abstract because a plain "asset" with no type makes no sense, so it should never be created. It holds state and shared code (average price, capital gain), which an interface can't do, and it makes every subclass write the methods that depend on its type.
 
-The two interfaces are small and separate: each one represents a single capability. `Asset` implements both because, in this domain, every asset can be traded and is taxed on its gains. The capital gain calculation is shared and written in `Asset`; the tax rate and the order size rule are defined by each subclass.
+There are four interfaces:
+
+- Taxable is for anything taxed on a capital gain (calculateTaxableGain, getTaxRate).
+- Tradeable holds the order size rule (isOrderSizeValid).
+- AssetCreator has a single create method, written as a lambda in each AssetType value.
+- PortfolioRepository lists what the application needs to load and save a portfolio, without knowing it is stored in a CSV file.
+
+Taxable and Tradeable are kept small and apart, one ability each. Asset implements both, since here every asset can be traded and is taxed on its gains. The capital gain calculation is the same for everyone and lives in Asset, while each subclass sets its own tax rate and order size rule.
 
 ## 9. Custom exceptions
 
-Package `com.junia.portfolio.exception`, all extend `Exception`:
+They are in the com.junia.portfolio.exception package and all extend Exception.
 
-- `InsufficientFundsException`: the cost of a purchase, fees included, is higher than the available cash.
-- `AssetNotFoundException`: selling an asset that is not owned, or buying a symbol that is not on the market.
-- `InvalidTransactionException`: zero or negative quantity or price, quantity not allowed for this asset type (e.g. 2.5 shares), selling more units than owned, sale that does not cover the fees.
-- `InvalidDataFileException`: invalid line in a file (column count, badly written number, unknown asset type, wrong number of parameters, negative data, duplicate symbol). The message gives the file and the line.
+- InsufficientFundsException: a purchase, fees included, costs more than the cash available.
+- AssetNotFoundException: selling an asset you don't own, or buying a symbol that isn't on the market.
+- InvalidTransactionException: a quantity or price that is zero or negative, a quantity this asset type doesn't allow (2.5 shares, for example), selling more units than you own, or a sale too small to pay the fees.
+- InvalidDataFileException: a bad line in a file (wrong number of columns, badly written number, unknown asset type, wrong number of parameters, negative values, duplicate symbol). The message gives the file name and the line.
 
-The standard exceptions used are `IOException` (missing or unreadable file), `NumberFormatException` (user input) and `IllegalArgumentException` (invalid data when building an object).
+The application also uses three standard exceptions: IOException when a file is missing or can't be read, NumberFormatException for bad user input, and IllegalArgumentException for invalid data when an object is built.
 
 ## 10. Data loading
 
-Two files are read at startup from `src/main/resources/`:
+Two files are read at startup from src/main/resources:
 
-- `market.csv`: listed assets and their starting price (`TYPE,SYMBOL,PRICE,EXTRA_PARAM,EXTRA_PARAM2`), read by `MarketCsvParser`.
-- `assets.csv`: initial portfolio, with a `CASH` line for the cash balance (`TYPE,SYMBOL,QUANTITY,PURCHASE_PRICE,EXTRA_PARAM,EXTRA_PARAM2`), read by `CsvPortfolioRepository` and `AssetCsvParser`.
+- market.csv holds the assets on the market and their starting price, with the columns TYPE, SYMBOL, PRICE, EXTRA_PARAM, EXTRA_PARAM2. MarketCsvParser reads it.
+- assets.csv holds the starting portfolio, with a CASH line for the cash balance. Its columns are TYPE, SYMBOL, QUANTITY, PURCHASE_PRICE, EXTRA_PARAM, EXTRA_PARAM2. CsvPortfolioRepository reads it with AssetCsvParser.
 
-`AbstractCsvParser<T>` reads the file with `Files.lines()`, skips the header with `.skip(1)` and blank lines, then hands each line to the abstract `parseLine` method (Template Method pattern). The `TYPE` column is converted to an `AssetType`, which creates the right object (`Stock`, `CryptoAsset` or `Bond`).
+AbstractCsvParser<T> reads the file with Files.lines(), skips the header with .skip(1), ignores blank lines and passes each line to the abstract parseLine method (the Template Method pattern). The TYPE column becomes an AssetType, which creates a Stock, a CryptoAsset or a Bond.
 
-If a saved state exists (`data/portfolio_state.csv`, same format as `assets.csv`), it is loaded instead of the initial portfolio. If it is corrupted, the application says so and starts from the initial portfolio. Market prices are not saved: they start again from `market.csv` on every launch.
+If a saved state exists in data/portfolio_state.csv (same format as assets.csv), it is loaded instead of the starting portfolio. If that file is broken, the application says so and starts from assets.csv. Market prices aren't saved and start again from market.csv every time.
 
 ## 11. SOLID principles
 
-- **Single Responsibility**: `ConsoleMenu` only handles user interaction, `PortfolioService` the orders, `AnalyticsService` the indicators, `MarketDataService` the prices, `CsvPortfolioRepository` the persistence and the parsers the file reading. The model classes don't know the file format: if the save format changes, only the repository changes. `Application` only wires the objects together.
-- **Open/Closed**: adding an asset type (e.g. `RealEstateAsset`) means creating a subclass of `Asset` and a value in `AssetType`. The parser, the repository, `PortfolioService` and `AnalyticsService` don't change: there is no `if` or `switch` on the asset type, and fees, income, tax and order size are methods of the asset.
-- **Liskov Substitution**: any subclass of `Asset` can be used where an `Asset` is expected. The tests call the same methods on a `List<Asset>` containing all three types.
-- **Interface Segregation**: `Taxable` and `Tradeable` are two short interfaces rather than one interface grouping unrelated methods.
-- **Dependency Inversion**: dependencies are passed through constructors. `ConsoleMenu` and `PortfolioWebController` depend on the `PortfolioRepository` interface and not on `CsvPortfolioRepository`: only `Application` picks the implementation, so we could switch to a database without touching the user interface. `MarketDataService` receives its `Random`, which makes the simulation reproducible in tests.
+- Single Responsibility: ConsoleMenu only talks to the user, PortfolioService handles orders, AnalyticsService the indicators, MarketDataService the prices, CsvPortfolioRepository the saving and the parsers the file reading. The model classes don't know the file format, so changing it only touches the repository. Application only creates and connects the objects.
+- Open/Closed: to add a new asset type, say RealEstateAsset, you write a subclass of Asset and add a value to AssetType. The parser, the repository, PortfolioService and AnalyticsService stay the same, because none of them has an if or a switch on the type, and fees, income, tax and order size are methods of the asset.
+- Liskov Substitution: any subclass of Asset works wherever an Asset is expected. The tests call the same methods on a List<Asset> holding all three types.
+- Interface Segregation: Taxable and Tradeable are two short interfaces, each with methods that belong together.
+- Dependency Inversion: objects get what they need through their constructor. ConsoleMenu and PortfolioWebController use the PortfolioRepository interface, and only Application chooses CsvPortfolioRepository, so the storage could move to a database without changing the user interface. MarketDataService is given its Random, which lets the tests get the same simulation every run.
 
 ## 12. Tests
 
-The JUnit 5 tests are in `src/test/java/com/junia/portfolio` and run with `mvn test`. They cover normal cases, edge cases and error cases:
+The JUnit 5 tests are in src/test/java/com/junia/portfolio and run with mvn test. They check normal cases, edge cases and errors:
 
-- `model.AssetTest`: fees, income and taxation by asset type (including a polymorphic test on a `List<Asset>`), order size, average purchase price, position creation, creation through `AssetType`, data validation.
-- `model.PortfolioTest`: lookup, duplicate symbol, list that cannot be modified from outside, negative cash.
-- `service.PortfolioServiceTest`: buying an owned or new asset, fees, insufficient funds (including because of fees), buying with exactly the whole balance, invalid quantities, selling with and without tax, full sale, impossible sale.
-- `service.AnalyticsServiceTest`: total value, gains/losses, ROI, annual income, tax estimate, weights, position summary.
-- `service.MarketDataServiceTest`: initial prices, history, invalid price, bounded daily change.
-- `utils.AssetCsvParserTest` and `utils.MarketCsvParserTest`: correct reading, blank lines, invalid number, unknown type, missing columns, missing file.
-- `repository.CsvPortfolioRepositoryTest`: saving and reloading every field, line format, French locale, reset, corrupted file without losing the portfolio in memory.
-- `utils.FinancialFormatterTest`: bars and sparklines, including negative values.
-- `EndToEndPortfolioFlowTest`: full scenario using the real files (buying a new asset, simulation, full sale, save and restore).
+- model.AssetTest: fees, income and tax for each asset type (with a polymorphic test on a List<Asset>), order size, average purchase price, creating positions, creating assets through AssetType, data checks.
+- model.PortfolioTest: finding an asset, duplicate symbols, a list that can't be changed from outside, negative cash.
+- service.PortfolioServiceTest: buying an asset you own or a new one, fees, not enough cash (also when the fees make the difference), spending exactly the whole balance, bad quantities, selling with and without tax, selling everything, sales that can't happen.
+- service.AnalyticsServiceTest: total value, gains and losses, ROI, yearly income, tax estimate, weights, position summary.
+- service.MarketDataServiceTest: starting prices, history, invalid price, daily change staying within its limits.
+- utils.AssetCsvParserTest and utils.MarketCsvParserTest: reading a good file, blank lines, bad numbers, unknown type, missing columns, missing file.
+- repository.CsvPortfolioRepositoryTest: saving and reloading every field, line format, French locale, reset, and a broken file that doesn't wipe the portfolio in memory.
+- utils.FinancialFormatterTest: bars and sparklines, including negative values.
+- EndToEndPortfolioFlowTest: a full run on the real files (buying a new asset, simulating, selling everything, saving and loading back).
