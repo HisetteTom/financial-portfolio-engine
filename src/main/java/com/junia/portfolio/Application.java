@@ -1,6 +1,7 @@
 package com.junia.portfolio;
 
 import com.junia.portfolio.exception.InvalidDataFileException;
+import com.junia.portfolio.model.Asset;
 import com.junia.portfolio.model.Portfolio;
 import com.junia.portfolio.repository.CsvPortfolioRepository;
 import com.junia.portfolio.repository.PortfolioRepository;
@@ -14,6 +15,7 @@ import com.junia.portfolio.utils.MarketCsvParser;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Random;
 import java.util.Scanner;
 
@@ -25,18 +27,25 @@ public class Application {
 
     public static void main(String[] args) {
         try {
-            MarketDataService marketDataService = new MarketDataService(new MarketCsvParser().parse(MARKET_FILE), new Random());
-            PortfolioRepository repository = new CsvPortfolioRepository(INITIAL_PORTFOLIO_FILE, SAVED_STATE_FILE, new AssetCsvParser());
+            MarketCsvParser marketParser = new MarketCsvParser();
+            List<Asset> listings = marketParser.parse(MARKET_FILE);
+            MarketDataService marketDataService = new MarketDataService(listings, new Random());
+
+            AssetCsvParser assetParser = new AssetCsvParser();
+            PortfolioRepository repository = new CsvPortfolioRepository(INITIAL_PORTFOLIO_FILE, SAVED_STATE_FILE, assetParser);
             Portfolio portfolio = loadPortfolio(repository);
 
             PortfolioService portfolioService = new PortfolioService(portfolio, marketDataService);
             AnalyticsService analyticsService = new AnalyticsService(marketDataService);
 
             if (args.length > 0 && args[0].equalsIgnoreCase("--web")) {
-                new PortfolioWebController(portfolioService, marketDataService, analyticsService, repository).start(WEB_PORT);
+                PortfolioWebController webController = new PortfolioWebController(portfolioService, marketDataService, analyticsService, repository);
+                webController.start(WEB_PORT);
                 System.out.println("Web dashboard running at http://localhost:" + WEB_PORT);
             } else {
-                new ConsoleMenu(portfolioService, marketDataService, analyticsService, repository, new Scanner(System.in)).run();
+                Scanner scanner = new Scanner(System.in);
+                ConsoleMenu menu = new ConsoleMenu(portfolioService, marketDataService, analyticsService, repository, scanner);
+                menu.run();
             }
         } catch (IOException e) {
             System.out.println("Could not read data file: " + e.getMessage());

@@ -91,10 +91,13 @@ public class CsvPortfolioRepository implements PortfolioRepository {
         Portfolio loaded = new Portfolio();
 
         try {
-            lines.stream()
-                    .skip(1)
-                    .filter(line -> !line.isBlank())
-                    .forEach(line -> readLine(loaded, line));
+            // start at 1 to skip the header
+            for (int i = 1; i < lines.size(); i++) {
+                String line = lines.get(i);
+                if (!line.isBlank()) {
+                    readLine(loaded, line);
+                }
+            }
         } catch (IllegalArgumentException e) {
             throw new InvalidDataFileException("Invalid data in " + file.getFileName() + ": " + e.getMessage());
         }

@@ -61,9 +61,13 @@ public class PortfolioService {
 
     private TradeReceipt executeBuy(Order order) throws InsufficientFundsException, AssetNotFoundException, InvalidTransactionException {
         Optional<Asset> ownedAsset = portfolio.findAsset(order.getSymbol());
-        Asset reference = ownedAsset
-                .or(() -> marketDataService.findListing(order.getSymbol()))
-                .orElseThrow(() -> new AssetNotFoundException("Unknown symbol on the market: " + order.getSymbol()));
+        Asset reference;
+        if (ownedAsset.isPresent()) {
+            reference = ownedAsset.get();
+        } else {
+            reference = marketDataService.findListing(order.getSymbol())
+                    .orElseThrow(() -> new AssetNotFoundException("Unknown symbol on the market: " + order.getSymbol()));
+        }
 
         checkOrderSize(reference, order);
 

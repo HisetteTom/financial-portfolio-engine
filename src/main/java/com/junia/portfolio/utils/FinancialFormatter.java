@@ -31,7 +31,9 @@ public class FinancialFormatter {
             if (max == min) {
                 sparkline.append('▄');
             } else {
-                int index = (int) Math.round(((value - min) / (max - min)) * (SPARKLINE_LEVELS.length - 1));
+                // position of the value between min and max, from 0.0 to 1.0
+                double ratio = (value - min) / (max - min);
+                int index = (int) Math.round(ratio * (SPARKLINE_LEVELS.length - 1));
                 sparkline.append(SPARKLINE_LEVELS[index]);
             }
         }
