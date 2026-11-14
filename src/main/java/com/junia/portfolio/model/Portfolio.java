@@ -1,7 +1,6 @@
 package com.junia.portfolio.model;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -52,7 +51,8 @@ public class Portfolio {
     }
 
     public List<Asset> getAssets() {
-        return Collections.unmodifiableList(assets);
+        // a copy, so the list can only be changed through addAsset and removeAsset
+        return new ArrayList<>(assets);
     }
 
     public double getCashBalance() {

@@ -31,10 +31,12 @@ class PortfolioTest {
     }
 
     @Test
-    void shouldNotAllowAssetListToBeModifiedFromOutside() {
+    void shouldNotChangePortfolioWhenReturnedListIsModified() {
         Stock other = new Stock("MSFT", 1.0, 300.0, 0.008);
 
-        assertThrows(UnsupportedOperationException.class, () -> portfolio.getAssets().add(other));
+        portfolio.getAssets().add(other);
+
+        assertEquals(1, portfolio.getAssets().size());
     }
 
     @Test

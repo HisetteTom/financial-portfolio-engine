@@ -157,11 +157,11 @@ If a saved state exists in data/portfolio_state.csv (same format as assets.csv),
 The JUnit 5 tests are in src/test/java/com/junia/portfolio and run with mvn test. They check normal cases, edge cases and errors:
 
 - model.AssetTest: fees, income and tax for each asset type (with a polymorphic test on a List<Asset>), order size, average purchase price, creating positions, creating assets through AssetType, data checks.
-- model.PortfolioTest: finding an asset, duplicate symbols, a list that can't be changed from outside, negative cash.
+- model.PortfolioTest: finding an asset, duplicate symbols, changing the returned list doesn't change the portfolio, negative cash.
 - service.PortfolioServiceTest: buying an asset you own or a new one, fees, not enough cash (also when the fees make the difference), spending exactly the whole balance, bad quantities, selling with and without tax, selling everything, sales that can't happen.
 - service.AnalyticsServiceTest: total value, gains and losses, ROI, yearly income, tax estimate, weights, position summary.
 - service.MarketDataServiceTest: starting prices, history, invalid price, daily change staying within its limits.
-- utils.AssetCsvParserTest and utils.MarketCsvParserTest: reading a good file, blank lines, bad numbers, unknown type, missing columns, missing file.
+- utils.AssetCsvParserTest and utils.MarketCsvParserTest: reading a good file, blank lines, bad numbers, unknown type, missing columns, missing file, duplicate symbol in the market file.
 - repository.CsvPortfolioRepositoryTest: saving and reloading every field, line format, French locale, reset, and a broken file that doesn't wipe the portfolio in memory.
 - utils.FinancialFormatterTest: bars and sparklines, including negative values.
 - EndToEndPortfolioFlowTest: a full run on the real files (buying a new asset, simulating, selling everything, saving and loading back).

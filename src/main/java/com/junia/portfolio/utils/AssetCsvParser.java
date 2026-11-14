@@ -21,6 +21,7 @@ public class AssetCsvParser extends AbstractCsvParser<Asset> {
     }
 
     protected String[] splitColumns(String line, int expectedColumns) {
+        // -1 keeps the empty columns at the end of the line, like the missing EXTRA_PARAM2 of a stock
         String[] columns = line.split(",", -1);
         if (columns.length != expectedColumns) {
             throw new IllegalArgumentException("expected " + expectedColumns + " columns in line \"" + line + "\"");

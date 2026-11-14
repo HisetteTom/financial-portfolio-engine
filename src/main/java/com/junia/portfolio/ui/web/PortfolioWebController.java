@@ -60,7 +60,7 @@ public class PortfolioWebController {
         response.put("totalCostBasis", analyticsService.calculateTotalCostBasis(portfolio));
         response.put("totalUnrealizedPnl", analyticsService.calculateTotalUnrealizedGainLoss(portfolio));
         response.put("projectedAnnualIncome", analyticsService.calculateProjectedAnnualIncome(portfolio));
-        response.put("portfolioHistory", List.copyOf(portfolioHistory));
+        response.put("portfolioHistory", new ArrayList<>(portfolioHistory));
         response.put("allMarketPrices", marketDataService.getAllPrices());
         response.put("assets", analyticsService.summarizePositions(portfolio));
         ctx.json(response);

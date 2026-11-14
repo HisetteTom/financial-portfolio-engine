@@ -32,7 +32,7 @@ public class AnalyticsService {
 
     public double calculateTotalUnrealizedGainLoss(Portfolio portfolio) {
         return portfolio.getAssets().stream()
-                .mapToDouble(this::calculateUnrealizedGainLoss)
+                .mapToDouble(asset -> calculateUnrealizedGainLoss(asset))
                 .sum();
     }
 

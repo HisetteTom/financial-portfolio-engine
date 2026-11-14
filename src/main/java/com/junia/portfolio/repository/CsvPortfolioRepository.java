@@ -55,10 +55,10 @@ public class CsvPortfolioRepository implements PortfolioRepository {
         List<String> lines = new ArrayList<>();
         lines.add(HEADER);
         lines.add(toCsvLine(CASH_TYPE, "EUR", portfolio.getCashBalance(), 1.0, List.of()));
-        portfolio.getAssets().stream()
-                .map(asset -> toCsvLine(asset.getAssetType().name(), asset.getSymbol(),
-                        asset.getQuantity(), asset.getPurchasePrice(), asset.getSpecificParameters()))
-                .forEach(lines::add);
+        for (Asset asset : portfolio.getAssets()) {
+            lines.add(toCsvLine(asset.getAssetType().name(), asset.getSymbol(),
+                    asset.getQuantity(), asset.getPurchasePrice(), asset.getSpecificParameters()));
+        }
 
         if (savedStateFile.getParent() != null) {
             Files.createDirectories(savedStateFile.getParent());
@@ -68,9 +68,9 @@ public class CsvPortfolioRepository implements PortfolioRepository {
 
     private String toCsvLine(String type, String symbol, double quantity, double price, List<Double> parameters) {
         List<String> columns = new ArrayList<>(List.of(type, symbol, formatNumber(quantity), formatNumber(price)));
-        parameters.stream()
-                .map(this::formatNumber)
-                .forEach(columns::add);
+        for (double parameter : parameters) {
+            columns.add(formatNumber(parameter));
+        }
         while (columns.size() < COLUMN_COUNT) {
             columns.add("");
         }
@@ -104,11 +104,14 @@ public class CsvPortfolioRepository implements PortfolioRepository {
 
         portfolio.clear();
         portfolio.setCashBalance(loaded.getCashBalance());
-        loaded.getAssets().forEach(portfolio::addAsset);
+        for (Asset asset : loaded.getAssets()) {
+            portfolio.addAsset(asset);
+        }
     }
 
     private void readLine(Portfolio portfolio, String line) {
         if (line.startsWith(CASH_TYPE + ",")) {
+            // -1 keeps the empty columns at the end of the line
             String[] columns = line.split(",", -1);
             try {
                 portfolio.setCashBalance(Double.parseDouble(columns[2].trim()));

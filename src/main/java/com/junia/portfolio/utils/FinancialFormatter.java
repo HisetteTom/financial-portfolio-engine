@@ -23,8 +23,12 @@ public class FinancialFormatter {
             return "";
         }
 
-        double min = values.stream().mapToDouble(Double::doubleValue).min().orElse(0.0);
-        double max = values.stream().mapToDouble(Double::doubleValue).max().orElse(0.0);
+        double min = values.get(0);
+        double max = values.get(0);
+        for (double value : values) {
+            min = Math.min(min, value);
+            max = Math.max(max, value);
+        }
 
         StringBuilder sparkline = new StringBuilder();
         for (double value : values) {

@@ -10,7 +10,6 @@ import com.junia.portfolio.model.Portfolio;
 import com.junia.portfolio.model.TradeReceipt;
 import com.junia.portfolio.utils.FinancialFormatter;
 
-import java.util.Locale;
 import java.util.Optional;
 
 public class PortfolioService {
@@ -54,7 +53,8 @@ public class PortfolioService {
         if (order.getSymbol().isBlank()) {
             throw new InvalidTransactionException("Order symbol is missing.");
         }
-        if (!(order.getQuantity() > 0) || !(order.getPrice() > 0)) {
+        // Double.parseDouble accepts "NaN", and NaN <= 0 is false, so it needs its own check
+        if (Double.isNaN(order.getQuantity()) || order.getQuantity() <= 0 || order.getPrice() <= 0) {
             throw new InvalidTransactionException("Order quantity and price must be strictly positive.");
         }
     }
@@ -74,8 +74,8 @@ public class PortfolioService {
         double fee = reference.calculateTransactionFee(order.getQuantity(), order.getPrice());
         double totalCost = order.getTotalValue() + fee;
         if (portfolio.getCashBalance() < totalCost) {
-            throw new InsufficientFundsException(String.format(Locale.ROOT,
-                    "Insufficient funds: %.2f needed but only %.2f available.", totalCost, portfolio.getCashBalance()));
+            throw new InsufficientFundsException(String.format("Insufficient funds: %.2f needed but only %.2f available.",
+                    totalCost, portfolio.getCashBalance()));
         }
 
         portfolio.withdrawCash(totalCost);

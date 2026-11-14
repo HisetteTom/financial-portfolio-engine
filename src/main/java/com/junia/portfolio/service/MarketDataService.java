@@ -3,7 +3,6 @@ package com.junia.portfolio.service;
 import com.junia.portfolio.model.Asset;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,6 +19,7 @@ public class MarketDataService {
     private final Random random;
 
     public MarketDataService(List<Asset> listedAssets, Random random) {
+        // LinkedHashMap keeps the order of the market file for the display
         this.listings = new LinkedHashMap<>();
         this.currentPrices = new LinkedHashMap<>();
         this.priceHistory = new LinkedHashMap<>();
@@ -43,7 +43,11 @@ public class MarketDataService {
     }
 
     public double getCurrentPrice(Asset asset) {
-        return currentPrices.getOrDefault(asset.getSymbol(), asset.getPurchasePrice());
+        if (currentPrices.containsKey(asset.getSymbol())) {
+            return currentPrices.get(asset.getSymbol());
+        }
+        // an asset that is not on the market keeps its purchase price
+        return asset.getPurchasePrice();
     }
 
     public void setPrice(String symbol, double price) {
@@ -52,29 +56,40 @@ public class MarketDataService {
         }
         String key = symbol.toUpperCase();
         currentPrices.put(key, price);
-        priceHistory.computeIfAbsent(key, k -> new ArrayList<>()).add(price);
+        addToHistory(key, price);
+    }
+
+    private void addToHistory(String symbol, double price) {
+        if (!priceHistory.containsKey(symbol)) {
+            priceHistory.put(symbol, new ArrayList<>());
+        }
+        priceHistory.get(symbol).add(price);
     }
 
     public Map<String, Double> getAllPrices() {
-        return Collections.unmodifiableMap(currentPrices);
+        return new LinkedHashMap<>(currentPrices);
     }
 
     public List<Asset> getListings() {
-        return List.copyOf(listings.values());
+        return new ArrayList<>(listings.values());
     }
 
     public List<Double> getPriceHistory(String symbol) {
-        return Collections.unmodifiableList(priceHistory.getOrDefault(symbol.toUpperCase(), List.of()));
+        List<Double> history = priceHistory.get(symbol.toUpperCase());
+        if (history == null) {
+            return new ArrayList<>();
+        }
+        return new ArrayList<>(history);
     }
 
     public void simulateMarketDay() {
-        for (Map.Entry<String, Double> entry : currentPrices.entrySet()) {
+        for (String symbol : currentPrices.keySet()) {
             double changePercent = (random.nextDouble() * 2 * MAX_DAILY_VARIATION) - MAX_DAILY_VARIATION;
-            double newPrice = Math.round(entry.getValue() * (1.0 + changePercent) * 100.0) / 100.0;
+            double newPrice = Math.round(currentPrices.get(symbol) * (1.0 + changePercent) * 100.0) / 100.0;
             newPrice = Math.max(MINIMUM_PRICE, newPrice);
 
-            entry.setValue(newPrice);
-            priceHistory.computeIfAbsent(entry.getKey(), k -> new ArrayList<>()).add(newPrice);
+            currentPrices.put(symbol, newPrice);
+            addToHistory(symbol, newPrice);
         }
     }
 }
