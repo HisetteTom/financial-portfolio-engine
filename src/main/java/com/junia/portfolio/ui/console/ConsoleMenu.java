@@ -44,14 +44,29 @@ public class ConsoleMenu {
             }
 
             switch (readInput()) {
-                case "1" -> displayPortfolio();
-                case "2" -> displayMarket();
-                case "3" -> placeOrder(OrderType.BUY);
-                case "4" -> placeOrder(OrderType.SELL);
-                case "5" -> simulateMarketDay();
-                case "6" -> resetPortfolio();
-                case "7" -> running = false;
-                default -> System.out.println("Invalid option.");
+                case "1":
+                    displayPortfolio();
+                    break;
+                case "2":
+                    displayMarket();
+                    break;
+                case "3":
+                    placeOrder(OrderType.BUY);
+                    break;
+                case "4":
+                    placeOrder(OrderType.SELL);
+                    break;
+                case "5":
+                    simulateMarketDay();
+                    break;
+                case "6":
+                    resetPortfolio();
+                    break;
+                case "7":
+                    running = false;
+                    break;
+                default:
+                    System.out.println("Invalid option.");
             }
         }
         savePortfolio();

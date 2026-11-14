@@ -3,8 +3,8 @@ package com.junia.portfolio.utils;
 import com.junia.portfolio.model.Asset;
 import com.junia.portfolio.model.AssetType;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Stream;
 
 public class AssetCsvParser extends AbstractCsvParser<Asset> {
 
@@ -39,10 +39,13 @@ public class AssetCsvParser extends AbstractCsvParser<Asset> {
 
     protected Asset createAsset(String type, String symbol, double quantity, double price,
                                 String extraParam, String secondExtraParam, String line) {
-        List<Double> parameters = Stream.of(extraParam, secondExtraParam)
-                .filter(value -> !value.isBlank())
-                .map(value -> parseNumber(value, line))
-                .toList();
+        List<Double> parameters = new ArrayList<>();
+        if (!extraParam.isBlank()) {
+            parameters.add(parseNumber(extraParam, line));
+        }
+        if (!secondExtraParam.isBlank()) {
+            parameters.add(parseNumber(secondExtraParam, line));
+        }
         try {
             return parseType(type, line).create(symbol, quantity, price, parameters);
         } catch (IllegalArgumentException e) {
